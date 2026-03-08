@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Battery Prediction System | Demo Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00f2fe;
+            --secondary: #4facfe;
+            --bg: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text: #f8fafc;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background: radial-gradient(circle at top right, #1e293b, #0f172a);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 2rem;
+            overflow-x: hidden;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+        }
+
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 100px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border: 1px solid var(--success);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            padding: 1.5rem;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-label {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-sub {
+            font-size: 0.85rem;
+            color: var(--success);
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .chart-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            padding: 1.5rem;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            height: 400px;
+        }
+
+        .prediction-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .prediction-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 1rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            transition: width 0.5s ease;
+        }
+
+        .warning-toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--danger);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
+            display: none;
+            animation: slideIn 0.3s ease;
+            z-index: 1000;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        h2 { font-size: 1.2rem; margin-bottom: 1.5rem; font-weight: 600; color: #cbd5e1; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>EV Battery Analytics</h1>
+            <p style="color: #64748b; font-size: 0.9rem;">AI-Powered Prediction Engine v1.0</p>
+        </div>
+        <div class="status-badge">
+            <div class="status-dot"></div>
+            Real-time Monitoring Active
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <span class="card-label">Voltage</span>
+            <div class="card-value" id="voltage-val">4.12 V</div>
+            <div class="card-sub">Normal Range</div>
+        </div>
+        <div class="card">
+            <span class="card-label">Current</span>
+            <div class="card-value" id="current-val">1.2 A</div>
+            <div class="card-sub">Active Loading</div>
+        </div>
+        <div class="card">
+            <span class="card-label">Temperature</span>
+            <div class="card-value" id="temp-val">28.4 °C</div>
+            <div class="card-sub" style="color: var(--success);">Optimal</div>
+        </div>
+        <div class="card">
+            <span class="card-label">Predicted RUL</span>
+            <div class="card-value" id="rul-val">1240 Hrs</div>
+            <div class="card-sub">Estimated Life</div>
+        </div>
+    </div>
+
+    <div class="charts-container">
+        <div class="chart-card">
+            <h2>Real-time Battery Performance</h2>
+            <canvas id="performanceChart"></canvas>
+        </div>
+        <div class="chart-card prediction-panel">
+            <h2>AI State Predictions</h2>
+            
+            <div class="prediction-item">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span>State of Charge (SOC)</span>
+                    <span id="soc-percent" style="color: var(--primary); font-weight: 700;">85.4%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="soc-bar" style="width: 85.4%;"></div>
+                </div>
+            </div>
+
+            <div class="prediction-item">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span>State of Health (SOH)</span>
+                    <span id="soh-percent" style="color: var(--success); font-weight: 700;">99.2%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="soh-bar" style="width: 99.2%; background: linear-gradient(to right, #10b981, #34d399);"></div>
+                </div>
+            </div>
+
+            <div class="prediction-item" style="margin-top: auto; background: rgba(0, 242, 254, 0.05);">
+                <span class="card-label">ML Model Confidence</span>
+                <div class="card-value" style="font-size: 1.5rem;">98.7%</div>
+                <p style="font-size: 0.75rem; color: #64748b;">Random Forest Regressor Inference</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="warning-toast" id="warning-toast">
+        <strong>⚠️ CRITICAL ALERT:</strong> <span id="warning-msg">High temperature detected!</span>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('performanceChart').getContext('2d');
+        const labels = Array.from({length: 20}, (_, i) => i + 's');
+        const data = {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Voltage (V)',
+                    data: Array(20).fill(4.1),
+                    borderColor: '#00f2fe',
+                    backgroundColor: 'rgba(0, 242, 254, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: 'Current (A)',
+                    data: Array(20).fill(1.2),
+                    borderColor: '#4facfe',
+                    backgroundColor: 'rgba(79, 172, 254, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }
+            ]
+        };
+
+        const config = {
+            type: 'line',
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#94a3b8', font: { family: 'Outfit' } } }
+                },
+                scales: {
+                    y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8' } },
+                    x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                }
+            }
+        };
+
+        const chart = new Chart(ctx, config);
+
+        // Simulation Logic
+        let soc = 85.4;
+        let soh = 99.2;
+        let time = 0;
+
+        function updateSimulation() {
+            time++;
+            soc -= 0.05;
+            if (soc < 0) soc = 100;
+
+            const voltage = 3.6 + (soc / 100) * 0.5 + (Math.random() * 0.02);
+            const current = 1.0 + (Math.random() * 2);
+            const temp = 25 + (current * 2) + (Math.random() * 2);
+
+            // Update UI
+            document.getElementById('voltage-val').textContent = voltage.toFixed(2) + ' V';
+            document.getElementById('current-val').textContent = current.toFixed(1) + ' A';
+            document.getElementById('temp-val').textContent = temp.toFixed(1) + ' °C';
+            document.getElementById('soc-percent').textContent = soc.toFixed(1) + '%';
+            document.getElementById('soc-bar').style.width = soc + '%';
+            
+            // Temperature coloring
+            const tempSub = document.querySelector('#temp-val + .card-sub');
+            if (temp > 40) {
+                tempSub.textContent = 'High';
+                tempSub.style.color = 'var(--danger)';
+                showWarning('High temperature detected!');
+            } else {
+                tempSub.textContent = 'Optimal';
+                tempSub.style.color = 'var(--success)';
+                hideWarning();
+            }
+
+            // Update Chart
+            chart.data.datasets[0].data.shift();
+            chart.data.datasets[0].data.push(voltage);
+            chart.data.datasets[1].data.shift();
+            chart.data.datasets[1].data.push(current);
+            chart.update('none');
+        }
+
+        const toast = document.getElementById('warning-toast');
+        function showWarning(msg) {
+            document.getElementById('warning-msg').textContent = msg;
+            toast.style.display = 'block';
+        }
+        function hideWarning() {
+            toast.style.display = 'none';
+        }
+
+        setInterval(updateSimulation, 1000);
+    </script>
+</body>
+</html>
